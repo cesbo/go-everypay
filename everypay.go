@@ -65,20 +65,29 @@ func NewEverypay(username, secret, account string, production bool) *Everypay {
 }
 
 func (e *Everypay) request(
-	path string,
+	method string,
+	reference *url.URL,
 	requestData interface{},
 	responseData interface{},
 ) error {
-	requestBody := &bytes.Buffer{}
-	if err := json.NewEncoder(requestBody).Encode(requestData); err != nil {
-		return fmt.Errorf("encode: %w", err)
+	var request *http.Request
+
+	switch method {
+	case http.MethodGet:
+		request, _ = http.NewRequest(http.MethodGet, "", nil)
+
+	case http.MethodPost:
+		requestBody := &bytes.Buffer{}
+		_ = json.NewEncoder(requestBody).Encode(requestData)
+
+		request, _ = http.NewRequest(http.MethodPost, "", requestBody)
+		request.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	default:
+		return fmt.Errorf("invalid method: %s", method)
 	}
 
-	request, _ := http.NewRequest(http.MethodPost, "", requestBody)
-	request.URL = e.endpoint.ResolveReference(&url.URL{
-		Path: path,
-	})
-	request.Header.Set("Content-Type", "application/json; charset=utf-8")
+	request.URL = e.endpoint.ResolveReference(reference)
 	request.SetBasicAuth(e.username, e.secret)
 
 	response, err := client.Do(request)

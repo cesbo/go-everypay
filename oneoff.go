@@ -2,6 +2,8 @@ package everypay
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,6 +58,10 @@ type oneOffResponse struct {
 
 // InitialPayment returns the payment link
 func (e *Everypay) InitialPayment(o *OneOff) (string, error) {
+	u := &url.URL{
+		Path: "payments/oneoff",
+	}
+
 	requestData := &oneOffRequest{
 		OneOff:      o,
 		ApiUsername: e.username,
@@ -66,8 +72,8 @@ func (e *Everypay) InitialPayment(o *OneOff) (string, error) {
 
 	responseData := &oneOffResponse{}
 
-	if err := e.request("payments/oneoff", requestData, responseData); err != nil {
-		return "", fmt.Errorf("oneoff: %w", err)
+	if err := e.request(http.MethodPost, u, requestData, responseData); err != nil {
+		return "", fmt.Errorf("initial payment: %w", err)
 	}
 
 	return responseData.PaymentLink, nil
